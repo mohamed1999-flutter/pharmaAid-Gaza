@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "290516968096",
+    "project_id": "pharmaaid-gaza",
+    "storage_bucket": "pharmaaid-gaza.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:290516968096:android:5f511285a9f9143b105fc5",
+        "android_client_info": {
+          "package_name": "com.example.pharmaaid_gaza"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "290516968096-e8p11h968eshktm5f18lcfrb36of7mb3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTaCT-NYgb5_TMdrXe5-Eu5LmzCo3Sfq8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "290516968096-e8p11h968eshktm5f18lcfrb36of7mb3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

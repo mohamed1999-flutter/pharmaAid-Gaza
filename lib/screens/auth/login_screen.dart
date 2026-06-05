@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
 import '../../core/service/auth_service.dart';
+import '../home_screen/home_screen.dart';
 import 'register_pharmacy_screen.dart';
 
 /// Pharmacy login screen with bilingual support and app-style UI.
@@ -57,9 +58,17 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          automaticallyImplyLeading: false,
           centerTitle: true,
           title: const Text('Pharmacy Login'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.translate_rounded),

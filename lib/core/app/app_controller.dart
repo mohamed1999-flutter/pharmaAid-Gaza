@@ -9,7 +9,7 @@ class AppController extends ChangeNotifier {
 
   Locale _locale = const Locale('ar');
   ThemeMode _themeMode = ThemeMode.light;
-  bool _isPharmacyMode = true;
+  bool _isPharmacyMode = false;
 
   Locale get locale => _locale;
   ThemeMode get themeMode => _themeMode;

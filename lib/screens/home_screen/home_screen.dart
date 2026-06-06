@@ -4,7 +4,13 @@ import 'package:provider/provider.dart';
 import '../../core/app/app_controller.dart';
 import '../../core/localization/app_keys.dart';
 import '../../core/localization/app_texts.dart';
-import '../pharmacy/pharmacy_shell_screen.dart';
+import '../../core/providers/cart_provider.dart';
+import '../../core/service/auth_service.dart';
+import '../../core/service/firestore_service.dart';
+import '../auth/login_screen.dart';
+import '../chat/chat_list_screen.dart';
+import '../user/cart_screen.dart';
+import '../user/pharmacies_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -103,11 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   if (!mounted) return;
 
-                  // Move directly to the pharmacy system.
+                  // Navigate to pharmacy login screen.
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (_) => const PharmacyShellScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
                     (route) => false,
                   );
                 },
@@ -241,6 +245,34 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.swap_horiz_rounded, color: colorScheme.onSurface),
           ),
           actions: [
+            StreamBuilder<int>(
+              stream: FirestoreService.totalUnreadCountStream(
+                AuthService.currentUser?.uid ?? '',
+                false,
+              ),
+              builder: (context, snapshot) {
+                final count = snapshot.data ?? 0;
+                return Badge(
+                  label: Text('$count'),
+                  isLabelVisible: count > 0,
+                  backgroundColor: Colors.red,
+                  child: IconButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const ChatListScreen(isPharmacy: false),
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.chat_bubble_outline_rounded,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                );
+              },
+            ),
             IconButton(
               onPressed: () {},
               icon: Stack(
@@ -266,27 +298,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             IconButton(
-              onPressed: () {},
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    Icons.shopping_cart_outlined,
-                    color: colorScheme.onSurface,
-                  ),
-                  Positioned(
-                    right: -1,
-                    top: -1,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: colorScheme.error,
-                        shape: BoxShape.circle,
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const CartScreen()));
+              },
+              icon: Consumer<CartProvider>(
+                builder: (context, cart, _) {
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(
+                        Icons.shopping_cart_outlined,
+                        color: colorScheme.onSurface,
                       ),
-                    ),
-                  ),
-                ],
+                      if (cart.itemCount > 0)
+                        Positioned(
+                          right: -1,
+                          top: -1,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: colorScheme.error,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: colorScheme.surface,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -304,14 +349,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   textColor: colorScheme.onSurface,
                   borderColor: colorScheme.outlineVariant,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  _t(context, AppKeys.hiAhmed),
-                  style: textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
+
                 const SizedBox(height: 14),
                 _BannerCarousel(
                   controller: _pageController,
@@ -336,7 +374,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   actionText: _t(context, AppKeys.viewAll),
                   titleColor: colorScheme.onSurface,
                   actionColor: colorScheme.primary,
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PharmaciesScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 12),
                 ...pharmacies.map(
@@ -580,39 +625,41 @@ class _BannerCarousel extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           flex: 2,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                item.title,
-                                textAlign: TextAlign.end,
-                                style: TextStyle(
-                                  color: colorScheme.onPrimary,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.15,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                item.subtitle,
-                                textAlign: TextAlign.end,
-                                style: TextStyle(
-                                  color: colorScheme.onPrimary.withOpacity(
-                                    0.95,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: isArabic
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  item.title,
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: colorScheme.onPrimary,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.15,
                                   ),
-                                  fontSize: 12,
-                                  height: 1.3,
                                 ),
-                              ),
-                              const SizedBox(height: 10),
-                              Align(
-                                alignment: isArabic
-                                    ? Alignment.centerLeft
-                                    : Alignment.centerRight,
-                                child: ElevatedButton(
+                                const SizedBox(height: 8),
+                                Text(
+                                  item.subtitle,
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: colorScheme.onPrimary.withOpacity(
+                                      0.95,
+                                    ),
+                                    fontSize: 12,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ElevatedButton(
                                   style: ElevatedButton.styleFrom(
+                                    minimumSize: Size.zero,
                                     backgroundColor: colorScheme.onPrimary,
                                     foregroundColor: colorScheme.primary,
                                     elevation: 0,
@@ -632,8 +679,8 @@ class _BannerCarousel extends StatelessWidget {
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],

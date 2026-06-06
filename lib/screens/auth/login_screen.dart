@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
+import '../../core/service/app_exception.dart';
 import '../../core/service/auth_service.dart';
-import '../home_screen/home_screen.dart';
+import 'auth_gate.dart';
 import 'register_pharmacy_screen.dart';
 
-/// Pharmacy login screen with bilingual support and app-style UI.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -29,17 +29,48 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String? _validateEmail(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Email is required';
+    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+    if (!emailRegex.hasMatch(text)) return 'Enter a valid email';
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return 'Password is required';
+    if (text.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  }
+
   Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _loading = true);
+
     try {
-      await AuthService.signIn(email: _email.text, password: _password.text);
+      await AuthService.signInPharmacy(
+        email: _email.text,
+        password: _password.text,
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+
+      final message = e is AppException ? e.message : e.toString();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -56,132 +87,166 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: direction,
       child: Scaffold(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          centerTitle: true,
-          title: const Text('Pharmacy Login'),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                (route) => false,
-              );
-            },
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                cs.primary.withOpacity(0.12),
+                theme.scaffoldBackgroundColor,
+              ],
+            ),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.translate_rounded),
-              onPressed: () => context.read<AppController>().toggleLocale(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.brightness_6_outlined),
-              onPressed: () => context.read<AppController>().toggleTheme(),
-            ),
-          ],
-        ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(28),
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.secondary],
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: direction == TextDirection.rtl
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     ),
                   ),
-                  child: Icon(
-                    Icons.local_pharmacy_rounded,
-                    size: 48,
-                    color: cs.onPrimary,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'PharmaAid Gaza',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  isAr
-                      ? 'سجّل دخولك كصيدلي أو أنشئ حساب جديد'
-                      : 'Sign in as a pharmacist or create a new account',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 26),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: isAr ? 'البريد الإلكتروني' : 'Email',
-                          border: const OutlineInputBorder(),
-                        ),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Required' : null,
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.secondary],
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: _obscure,
-                        decoration: InputDecoration(
-                          labelText: isAr ? 'كلمة المرور' : 'Password',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscure
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
+                      boxShadow: [
+                        BoxShadow(
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                          color: cs.primary.withOpacity(0.25),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.local_pharmacy_rounded,
+                      size: 48,
+                      color: cs.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'PharmaAid Gaza',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isAr
+                        ? 'سجّل دخولك كصيدلي للوصول إلى لوحة التحكم'
+                        : 'Sign in as a pharmacist to access your dashboard',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  Card(
+                    elevation: 0,
+                    color: cs.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: BorderSide(color: cs.outlineVariant),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _email,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: _validateEmail,
+                              decoration: InputDecoration(
+                                labelText: isAr ? 'البريد الإلكتروني' : 'Email',
+                                prefixIcon: const Icon(Icons.email_outlined),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
                             ),
-                            onPressed: () =>
-                                setState(() => _obscure = !_obscure),
-                          ),
-                        ),
-                        validator: (v) =>
-                            v == null || v.length < 6 ? 'Min 6 chars' : null,
-                      ),
-                      const SizedBox(height: 18),
-                      SizedBox(
-                        height: 52,
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _loading ? null : _login,
-                          child: _loading
-                              ? const CircularProgressIndicator()
-                              : Text(isAr ? 'دخول' : 'Sign in'),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterPharmacyScreen(),
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              controller: _password,
+                              obscureText: _obscure,
+                              validator: _validatePassword,
+                              decoration: InputDecoration(
+                                labelText: isAr ? 'كلمة المرور' : 'Password',
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscure
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () =>
+                                      setState(() => _obscure = !_obscure),
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
                             ),
-                          );
-                        },
-                        child: Text(
-                          isAr ? 'إنشاء حساب جديد' : 'Create new account',
+                            const SizedBox(height: 18),
+                            SizedBox(
+                              height: 54,
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _loading ? null : _login,
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.2,
+                                        ),
+                                      )
+                                    : Text(isAr ? 'دخول' : 'Sign in'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextButton(
+                              onPressed: _loading
+                                  ? null
+                                  : () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const RegisterPharmacyScreen(),
+                                        ),
+                                      );
+                                    },
+                              child: Text(
+                                isAr ? 'إنشاء حساب جديد' : 'Create new account',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

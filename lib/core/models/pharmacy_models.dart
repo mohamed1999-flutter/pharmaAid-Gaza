@@ -79,9 +79,9 @@ class PharmacyCategory {
     };
   }
 
-  factory PharmacyCategory.fromMap(Map<String, dynamic> map) {
+  factory PharmacyCategory.fromMap(Map<String, dynamic> map, [String? id]) {
     return PharmacyCategory(
-      id: map['id'] ?? '',
+      id: id ?? map['id'] ?? '',
       nameAr: map['nameAr'] ?? '',
       nameEn: map['nameEn'] ?? '',
       imageUrl: map['imageUrl'] ?? '',
@@ -143,9 +143,9 @@ class MedicineModel {
     };
   }
 
-  factory MedicineModel.fromMap(Map<String, dynamic> map) {
+  factory MedicineModel.fromMap(Map<String, dynamic> map, [String? id]) {
     return MedicineModel(
-      id: map['id'] ?? '',
+      id: id ?? map['id'] ?? '',
       categoryId: map['categoryId'] ?? '',
       nameAr: map['nameAr'] ?? '',
       nameEn: map['nameEn'] ?? '',

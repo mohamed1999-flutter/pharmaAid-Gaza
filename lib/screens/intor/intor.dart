@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/localization/app_keys.dart';
 import '../../core/localization/app_texts.dart';
+import '../auth/login_screen.dart';
 import '../shell/app_shell.dart';
 
 class IntorScreen extends StatelessWidget {
@@ -12,6 +13,13 @@ class IntorScreen extends StatelessWidget {
   static const Color _darkBg = Color(0xFF111111);
 
   void _goHome(BuildContext context) {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  void _skipToApp(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AppShell()),
       (route) => false,
@@ -38,7 +46,7 @@ class IntorScreen extends StatelessWidget {
                 top: 12,
                 left: 16,
                 child: GestureDetector(
-                  onTap: () => _goHome(context),
+                  onTap: () => _skipToApp(context),
                   child: _SkipPill(
                     text: AppTexts.tr(context, AppKeys.skip),
                     isDark: isDark,

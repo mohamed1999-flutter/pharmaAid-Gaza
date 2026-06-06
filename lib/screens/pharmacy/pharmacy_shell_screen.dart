@@ -9,31 +9,8 @@ import 'pharmacy_medicines_screen.dart' as medicines_screen;
 import 'pharmacy_orders_screen.dart' as orders_screen;
 import 'pharmacy_profile_screen.dart' as profile_screen;
 
-class PharmacyShellScreen extends StatefulWidget {
+class PharmacyShellScreen extends StatelessWidget {
   const PharmacyShellScreen({super.key});
-
-  @override
-  State<PharmacyShellScreen> createState() => _PharmacyShellScreenState();
-}
-
-class _PharmacyShellScreenState extends State<PharmacyShellScreen> {
-  int _index = 0;
-
-  late final List<Widget> _screens = [
-    const PharmacyDashboardScreen(key: PageStorageKey('pharmacy_dashboard')),
-    const categories_screen.PharmacyCategoriesScreen(
-      key: PageStorageKey('pharmacy_categories'),
-    ),
-    const medicines_screen.PharmacyMedicinesScreen(
-      key: PageStorageKey('pharmacy_medicines'),
-    ),
-    const orders_screen.PharmacyOrdersScreen(
-      key: PageStorageKey('pharmacy_orders'),
-    ),
-    const profile_screen.PharmacyProfileScreen(
-      key: PageStorageKey('pharmacy_profile'),
-    ),
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -68,51 +45,131 @@ class _PharmacyShellScreenState extends State<PharmacyShellScreen> {
               return const LoginScreen();
             }
 
-            return Directionality(
-              textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
-              child: Scaffold(
-                body: IndexedStack(index: _index, children: _screens),
-                bottomNavigationBar: NavigationBar(
-                  selectedIndex: _index,
-                  onDestinationSelected: (value) {
-                    if (value == _index) return;
-                    setState(() => _index = value);
-                  },
-                  height: 70,
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  destinations: [
-                    NavigationDestination(
-                      icon: const Icon(Icons.dashboard_outlined),
-                      selectedIcon: const Icon(Icons.dashboard_rounded),
-                      label: isAr ? 'الرئيسية' : 'Home',
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.category_outlined),
-                      selectedIcon: const Icon(Icons.category_rounded),
-                      label: isAr ? 'الكاتجوري' : 'Categories',
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.medication_outlined),
-                      selectedIcon: const Icon(Icons.medication_rounded),
-                      label: isAr ? 'الأدوية' : 'Medicines',
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      selectedIcon: const Icon(Icons.receipt_long_rounded),
-                      label: isAr ? 'الطلبات' : 'Orders',
-                    ),
-                    NavigationDestination(
-                      icon: const Icon(Icons.storefront_outlined),
-                      selectedIcon: const Icon(Icons.storefront_rounded),
-                      label: isAr ? 'الصيدلية' : 'Pharmacy',
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _PharmacyMainScaffold(isAr: isAr);
           },
         );
       },
+    );
+  }
+}
+
+class _PharmacyMainScaffold extends StatefulWidget {
+  const _PharmacyMainScaffold({required this.isAr});
+
+  final bool isAr;
+
+  @override
+  State<_PharmacyMainScaffold> createState() => _PharmacyMainScaffoldState();
+}
+
+class _PharmacyMainScaffoldState extends State<_PharmacyMainScaffold> {
+  int _index = 0;
+
+  static const double _bottomBarHeight = 92;
+
+  late final List<Widget> _screens = [
+    const PharmacyDashboardScreen(key: PageStorageKey('pharmacy_dashboard')),
+    const categories_screen.PharmacyCategoriesScreen(
+      key: PageStorageKey('pharmacy_categories'),
+    ),
+    const medicines_screen.PharmacyMedicinesScreen(
+      key: PageStorageKey('pharmacy_medicines'),
+    ),
+    const orders_screen.PharmacyOrdersScreen(
+      key: PageStorageKey('pharmacy_orders'),
+    ),
+    const profile_screen.PharmacyProfileScreen(
+      key: PageStorageKey('pharmacy_profile'),
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Directionality(
+      textDirection: widget.isAr ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        extendBody: false,
+        backgroundColor: cs.surface,
+        body: IndexedStack(index: _index, children: _screens),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: cs.surface,
+              border: Border(top: BorderSide(color: cs.outlineVariant)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                indicatorColor: cs.primary.withOpacity(0.12),
+                labelTextStyle: WidgetStatePropertyAll(
+                  TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: cs.primary,
+                  ),
+                ),
+                iconTheme: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return IconThemeData(color: cs.primary, size: 26);
+                  }
+                  return IconThemeData(color: cs.onSurfaceVariant, size: 23);
+                }),
+              ),
+              child: NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: (value) {
+                  if (value == _index) return;
+                  setState(() => _index = value);
+                },
+                height: _bottomBarHeight,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.dashboard_outlined),
+                    selectedIcon: const Icon(Icons.dashboard_rounded),
+                    label: widget.isAr ? 'الرئيسية' : 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.category_outlined),
+                    selectedIcon: const Icon(Icons.category_rounded),
+                    label: widget.isAr ? 'الكاتجوري' : 'Categories',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.medication_outlined),
+                    selectedIcon: const Icon(Icons.medication_rounded),
+                    label: widget.isAr ? 'الأدوية' : 'Medicines',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.receipt_long_outlined),
+                    selectedIcon: const Icon(Icons.receipt_long_rounded),
+                    label: widget.isAr ? 'الطلبات' : 'Orders',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.storefront_outlined),
+                    selectedIcon: const Icon(Icons.storefront_rounded),
+                    label: widget.isAr ? 'الصيدلية' : 'Pharmacy',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

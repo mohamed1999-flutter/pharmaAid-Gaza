@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/pharmacy_models.dart';
 import '../models/user_models.dart';
-import 'auth_service.dart';
 
 /// Central Firestore gateway for all pharmacy data.
 class FirestoreService {
@@ -500,6 +499,7 @@ class FirestoreService {
   static Stream<QuerySnapshot<Map<String, dynamic>>> userChatsStream(
     String userId,
   ) {
+    print('Fetching user chats for UID: $userId');
     return _chatsRef()
         .where('userId', isEqualTo: userId)
         .orderBy('lastMessageTime', descending: true)
@@ -509,6 +509,7 @@ class FirestoreService {
   static Stream<QuerySnapshot<Map<String, dynamic>>> pharmacyChatsStream(
     String pharmacyId,
   ) {
+    print('Fetching pharmacy chats for UID: $pharmacyId');
     return _chatsRef()
         .where('pharmacyId', isEqualTo: pharmacyId)
         .orderBy('lastMessageTime', descending: true)
@@ -518,6 +519,7 @@ class FirestoreService {
   static Stream<QuerySnapshot<Map<String, dynamic>>> chatMessagesStream(
     String chatId,
   ) {
+    print('Fetching messages for Chat ID: $chatId');
     return _chatsRef()
         .doc(chatId)
         .collection('messages')
@@ -533,25 +535,32 @@ class FirestoreService {
     String? userImageUrl,
     String? pharmacyImageUrl,
   }) async {
-    final chatId = '${userId}_$pharmacyId';
-    final doc = await _chatsRef().doc(chatId).get();
+    try {
+      final chatId = '${userId}_$pharmacyId';
+      print('Checking/Creating chat room for: $chatId');
+      final doc = await _chatsRef().doc(chatId).get();
 
-    if (!doc.exists) {
-      await _chatsRef().doc(chatId).set({
-        'userId': userId,
-        'userName': userName,
-        'userImageUrl': userImageUrl,
-        'pharmacyId': pharmacyId,
-        'pharmacyName': pharmacyName,
-        'pharmacyImageUrl': pharmacyImageUrl,
-        'lastMessage': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'userUnreadCount': 0,
-        'pharmacyUnreadCount': 0,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      if (!doc.exists) {
+        print('Creating new chat room: $chatId');
+        await _chatsRef().doc(chatId).set({
+          'userId': userId,
+          'userName': userName,
+          'userImageUrl': userImageUrl,
+          'pharmacyId': pharmacyId,
+          'pharmacyName': pharmacyName,
+          'pharmacyImageUrl': pharmacyImageUrl,
+          'lastMessage': '',
+          'lastMessageTime': FieldValue.serverTimestamp(),
+          'userUnreadCount': 0,
+          'pharmacyUnreadCount': 0,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      return chatId;
+    } catch (e) {
+      print('Error in getOrCreateChatRoom: $e');
+      rethrow;
     }
-    return chatId;
   }
 
   static Future<void> sendMessage({
@@ -561,55 +570,67 @@ class FirestoreService {
     required String text,
     required bool isPharmacySender,
   }) async {
-    final batch = _db.batch();
-    final chatDocRef = _chatsRef().doc(chatId);
-    final messageRef = chatDocRef.collection('messages').doc();
+    try {
+      print('Sending message in Chat: $chatId from Sender: $senderId');
+      final batch = _db.batch();
+      final chatDocRef = _chatsRef().doc(chatId);
+      final messageRef = chatDocRef.collection('messages').doc();
 
-    batch.set(messageRef, {
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'text': text,
-      'timestamp': FieldValue.serverTimestamp(),
-      'isRead': false,
-    });
+      batch.set(messageRef, {
+        'senderId': senderId,
+        'receiverId': receiverId,
+        'text': text,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
 
-    final updateData = {
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    };
+      final updateData = {
+        'lastMessage': text,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+      };
 
-    if (isPharmacySender) {
-      updateData['userUnreadCount'] = FieldValue.increment(1);
-    } else {
-      updateData['pharmacyUnreadCount'] = FieldValue.increment(1);
+      if (isPharmacySender) {
+        updateData['userUnreadCount'] = FieldValue.increment(1);
+      } else {
+        updateData['pharmacyUnreadCount'] = FieldValue.increment(1);
+      }
+
+      batch.update(chatDocRef, updateData);
+
+      await batch.commit();
+      print('Message sent successfully to $receiverId');
+    } catch (e) {
+      print('Error sending message: $e');
+      rethrow;
     }
-
-    batch.update(chatDocRef, updateData);
-
-    await batch.commit();
   }
 
   static Stream<int> totalUnreadCountStream(String uid, bool isPharmacy) {
     if (uid.isEmpty) return Stream.value(0);
-    return (isPharmacy ? pharmacyChatsStream(uid) : userChatsStream(uid)).map((
-      snapshot,
-    ) {
-      int count = 0;
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        count +=
-            (isPharmacy
-                    ? (data['pharmacyUnreadCount'] ?? 0)
-                    : (data['userUnreadCount'] ?? 0))
-                as int;
-      }
-      return count;
-    });
+    return (isPharmacy ? pharmacyChatsStream(uid) : userChatsStream(uid))
+        .map((snapshot) {
+          int count = 0;
+          for (final doc in snapshot.docs) {
+            final data = doc.data();
+            count +=
+                ((isPharmacy
+                            ? (data['pharmacyUnreadCount'] ?? 0)
+                            : (data['userUnreadCount'] ?? 0))
+                        as num)
+                    .toInt();
+          }
+          return count;
+        })
+        .handleError((e) {
+          print('Error in totalUnreadCountStream: $e');
+          return 0;
+        });
   }
 
   static Future<void> markChatAsRead({
     required String chatId,
     required bool isPharmacy,
+    required String uid,
   }) async {
     final batch = _db.batch();
     final chatDocRef = _chatsRef().doc(chatId);
@@ -626,7 +647,7 @@ class FirestoreService {
     final messagesSnapshot = await chatDocRef
         .collection('messages')
         .where('isRead', isEqualTo: false)
-        .where('receiverId', isEqualTo: AuthService.currentUser?.uid)
+        .where('receiverId', isEqualTo: uid)
         .get();
 
     for (var doc in messagesSnapshot.docs) {

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/localization/app_keys.dart';
 import '../../core/localization/app_texts.dart';
+import '../../core/models/user_models.dart';
+import '../../core/providers/cart_provider.dart';
+import '../../core/service/firestore_service.dart';
+import '../user/cart_screen.dart';
 
 class OffersScreen extends StatefulWidget {
   const OffersScreen({super.key});
@@ -47,6 +52,7 @@ class _OffersScreenState extends State<OffersScreen> {
 
   final List<_ProductData> _products = const [
     _ProductData(
+      id: 'off_1',
       categoryKey: 'firstAid',
       titleAr: 'شاش طبي معقم',
       titleEn: 'Sterile medical gauze',
@@ -58,6 +64,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_2',
       categoryKey: 'firstAid',
       titleAr: 'لاصق جروح',
       titleEn: 'Wound plaster',
@@ -69,6 +76,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: true,
     ),
     _ProductData(
+      id: 'off_3',
       categoryKey: 'firstAid',
       titleAr: 'مطهر طبي',
       titleEn: 'Medical antiseptic',
@@ -80,6 +88,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_4',
       categoryKey: 'supplies',
       titleAr: 'قفازات طبية',
       titleEn: 'Medical gloves',
@@ -91,6 +100,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_5',
       categoryKey: 'supplies',
       titleAr: 'كمامة واقية',
       titleEn: 'Protective mask',
@@ -102,6 +112,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: true,
     ),
     _ProductData(
+      id: 'off_6',
       categoryKey: 'supplies',
       titleAr: 'مناديل معقمة',
       titleEn: 'Antiseptic wipes',
@@ -113,6 +124,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_7',
       categoryKey: 'babyCare',
       titleAr: 'كريم أطفال',
       titleEn: 'Baby cream',
@@ -124,6 +136,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: true,
     ),
     _ProductData(
+      id: 'off_8',
       categoryKey: 'babyCare',
       titleAr: 'شامبو أطفال',
       titleEn: 'Baby shampoo',
@@ -135,6 +148,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_9',
       categoryKey: 'personalCare',
       titleAr: 'غسول يدين',
       titleEn: 'Hand wash',
@@ -146,6 +160,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_10',
       categoryKey: 'personalCare',
       titleAr: 'مرطب بشرة',
       titleEn: 'Skin moisturizer',
@@ -157,6 +172,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: true,
     ),
     _ProductData(
+      id: 'off_11',
       categoryKey: 'personalCare',
       titleAr: 'مزيل عرق',
       titleEn: 'Deodorant',
@@ -168,6 +184,7 @@ class _OffersScreenState extends State<OffersScreen> {
       warm: false,
     ),
     _ProductData(
+      id: 'off_12',
       categoryKey: 'supplies',
       titleAr: 'شريط لاصق طبي',
       titleEn: 'Medical adhesive tape',
@@ -193,6 +210,79 @@ class _OffersScreenState extends State<OffersScreen> {
     return _products
         .where((product) => product.categoryKey == _selectedCategory)
         .toList();
+  }
+
+  Future<void> _addToCart(_ProductData item) async {
+    final cart = context.read<CartProvider>();
+    final code = Localizations.localeOf(context).languageCode;
+    final isAr = code == 'ar';
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Get first available pharmacy as a fallback for dummy items
+      final pharmacies = await FirestoreService.pharmaciesStream().first;
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+
+      if (pharmacies.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isAr ? 'لا توجد صيدليات متاحة حالياً' : 'No pharmacies available',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final pharmacyDoc = pharmacies.docs.first;
+      final pharmacyData = pharmacyDoc.data();
+      final pharmacyId = pharmacyDoc.id;
+      final pharmacyName =
+          pharmacyData['pharmacyName'] ?? pharmacyData['name'] ?? 'Pharmacy';
+
+      await cart.addItem(
+        CartItem(
+          medicineId: item.id,
+          name: isAr ? item.titleAr : item.titleEn,
+          price: double.parse(item.price),
+          quantity: 1,
+          pharmacyId: pharmacyId,
+          pharmacyName: pharmacyName,
+        ),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAr ? 'تم الإضافة إلى السلة' : 'Added to cart successfully',
+          ),
+          action: SnackBarAction(
+            label: isAr ? 'عرض السلة' : 'View Cart',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isAr ? 'حدث خطأ ما' : 'Something went wrong')),
+        );
+      }
+    }
   }
 
   @override
@@ -329,6 +419,7 @@ class _OffersScreenState extends State<OffersScreen> {
                           subText: subText,
                           borderColor: border,
                           surfaceColor: surface,
+                          onAddToCart: () => _addToCart(item),
                         );
                       }, childCount: _filteredProducts.length),
                       gridDelegate:
@@ -714,6 +805,7 @@ class _OfferCard extends StatelessWidget {
     required this.subText,
     required this.borderColor,
     required this.surfaceColor,
+    required this.onAddToCart,
   });
 
   final _ProductData product;
@@ -723,6 +815,7 @@ class _OfferCard extends StatelessWidget {
   final Color subText;
   final Color borderColor;
   final Color surfaceColor;
+  final VoidCallback onAddToCart;
 
   @override
   Widget build(BuildContext context) {
@@ -798,7 +891,7 @@ class _OfferCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${product.price} ${isArabic ? 'شيكل' : 'NIS'}',
+              '${product.price} ₪',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: textColor,
@@ -810,7 +903,7 @@ class _OfferCard extends StatelessWidget {
             SizedBox(
               height: 38,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: onAddToCart,
                 style: ElevatedButton.styleFrom(
                   elevation: 0,
                   backgroundColor: const Color(0xFF16D37A),
@@ -966,6 +1059,7 @@ class _CategoryData {
 }
 
 class _ProductData {
+  final String id;
   final String categoryKey;
   final String titleAr;
   final String titleEn;
@@ -977,6 +1071,7 @@ class _ProductData {
   final bool warm;
 
   const _ProductData({
+    required this.id,
     required this.categoryKey,
     required this.titleAr,
     required this.titleEn,

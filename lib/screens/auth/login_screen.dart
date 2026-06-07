@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:pharmaaid_gaza/screens/auth/register_user_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
 import '../../core/service/app_exception.dart';
 import '../../core/service/auth_service.dart';
+import '../../core/service/pharmacy_auth_service.dart';
 import 'auth_gate.dart';
 import 'register_pharmacy_screen.dart';
 
+enum LoginTarget { customer, pharmacy }
+
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialTarget = LoginTarget.customer});
+
+  final LoginTarget initialTarget;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -21,6 +27,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _loading = false;
   bool _obscure = true;
+  late LoginTarget _target;
+
+  @override
+  void initState() {
+    super.initState();
+    _target = widget.initialTarget;
+  }
 
   @override
   void dispose() {
@@ -44,6 +57,15 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
+  void _switchTarget() {
+    setState(() {
+      _target = _target == LoginTarget.customer
+          ? LoginTarget.pharmacy
+          : LoginTarget.customer;
+      _obscure = true;
+    });
+  }
+
   Future<void> _login() async {
     FocusScope.of(context).unfocus();
 
@@ -52,13 +74,32 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
 
     try {
-      await AuthService.signInPharmacy(
-        email: _email.text,
-        password: _password.text,
-      );
+      final isAr = Localizations.localeOf(context).languageCode == 'ar';
+      final appController = context.read<AppController>();
+
+      if (_target == LoginTarget.customer) {
+        await AuthService.signInCustomer(
+          email: _email.text,
+          password: _password.text,
+          isAr: isAr,
+        );
+        // Ensure AppMode matches the login type
+        await appController.setAppMode(AppMode.customer);
+      } else {
+        final isAr = Localizations.localeOf(context).languageCode == 'ar';
+        // Use the NEW PharmacyAuthService which uses a separate Firebase App instance.
+        await PharmacyAuthService.signInPharmacy(
+          email: _email.text,
+          password: _password.text,
+          isAr: isAr,
+        );
+        // Ensure AppMode matches the login type
+        await appController.setAppMode(AppMode.pharmacy);
+      }
 
       if (!mounted) return;
 
+      // Navigate to AuthGate which will decide which screen to show based on AppMode.
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthGate()),
         (route) => false,
@@ -78,11 +119,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.watch<AppController>();
-    final isAr = controller.locale.languageCode == 'ar';
+    final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final direction = isAr ? TextDirection.rtl : TextDirection.ltr;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isPharmacyMode = _target == LoginTarget.pharmacy;
 
     return Directionality(
       textDirection: direction,
@@ -103,15 +144,32 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: direction == TextDirection.rtl
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: Navigator.of(context).canPop()
+                            ? () => Navigator.of(context).pop()
+                            : null,
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: _switchTarget,
+                        tooltip: isPharmacyMode
+                            ? (isAr
+                                  ? 'التحويل إلى دخول العميل'
+                                  : 'Switch to customer login')
+                            : (isAr
+                                  ? 'التحويل إلى دخول الصيدلية'
+                                  : 'Switch to pharmacy login'),
+                        icon: Icon(
+                          isPharmacyMode
+                              ? Icons.person_rounded
+                              : Icons.local_pharmacy_rounded,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Container(
@@ -131,23 +189,31 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     child: Icon(
-                      Icons.local_pharmacy_rounded,
+                      isPharmacyMode
+                          ? Icons.local_pharmacy_rounded
+                          : Icons.person_rounded,
                       size: 48,
                       color: cs.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'PharmaAid Gaza',
+                    isPharmacyMode
+                        ? (isAr ? 'تسجيل دخول الصيدلية' : 'Pharmacy Login')
+                        : (isAr ? 'تسجيل دخول المستخدم' : 'Customer Login'),
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    isAr
-                        ? 'سجّل دخولك كصيدلي للوصول إلى لوحة التحكم'
-                        : 'Sign in as a pharmacist to access your dashboard',
+                    isPharmacyMode
+                        ? (isAr
+                              ? 'سجّل دخولك كصيدلي للوصول إلى لوحة التحكم'
+                              : 'Sign in as a pharmacy to access your dashboard')
+                        : (isAr
+                              ? 'سجّل دخولك كمستخدم عادي للشراء والطلبات'
+                              : 'Sign in as a customer to browse and place orders'),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: cs.onSurfaceVariant,
@@ -221,7 +287,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                           strokeWidth: 2.2,
                                         ),
                                       )
-                                    : Text(isAr ? 'دخول' : 'Sign in'),
+                                    : Text(
+                                        isPharmacyMode
+                                            ? (isAr
+                                                  ? 'دخول الصيدلية'
+                                                  : 'Sign in as pharmacy')
+                                            : (isAr
+                                                  ? 'دخول المستخدم'
+                                                  : 'Sign in'),
+                                      ),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -231,13 +305,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                   : () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const RegisterPharmacyScreen(),
+                                          builder: (_) => isPharmacyMode
+                                              ? const RegisterPharmacyScreen()
+                                              : const RegisterUserScreen(),
                                         ),
                                       );
                                     },
                               child: Text(
-                                isAr ? 'إنشاء حساب جديد' : 'Create new account',
+                                isPharmacyMode
+                                    ? (isAr
+                                          ? 'إنشاء حساب صيدلية جديد'
+                                          : 'Create pharmacy account')
+                                    : (isAr
+                                          ? 'إنشاء حساب مستخدم جديد'
+                                          : 'Create customer account'),
                               ),
                             ),
                           ],

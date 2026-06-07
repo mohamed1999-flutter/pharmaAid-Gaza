@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
+import '../../core/service/pharmacy_auth_service.dart';
+import '../../main.dart';
 import '../auth/login_screen.dart';
 import 'pharmacy_categories_screen.dart' as categories_screen;
 import 'pharmacy_dashboard_screen.dart';
@@ -15,39 +17,32 @@ class PharmacyShellScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
+    final pharmacyAuth = context.watch<PharmacyUserAuth?>();
+
+    if (pharmacyAuth == null) {
+      return const LoginScreen(initialTarget: LoginTarget.pharmacy);
+    }
+
+    final user = pharmacyAuth.user;
 
     return StreamBuilder(
-      stream: AuthService.authStateChanges(),
-      builder: (context, authSnapshot) {
-        if (authSnapshot.connectionState == ConnectionState.waiting) {
+      stream: FirestoreService.pharmacyStream(user.uid),
+      builder: (context, pharmacySnapshot) {
+        if (pharmacySnapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        final user = authSnapshot.data;
-        if (user == null) {
-          return const LoginScreen();
+        if (!pharmacySnapshot.hasData ||
+            pharmacySnapshot.data?.data() == null) {
+          // If profile doesn't exist, we might want to sign out or handle it
+          return const Scaffold(
+            body: Center(child: Text('Pharmacy profile not found')),
+          );
         }
 
-        return StreamBuilder(
-          stream: FirestoreService.pharmacyStream(user.uid),
-          builder: (context, pharmacySnapshot) {
-            if (pharmacySnapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-
-            if (!pharmacySnapshot.hasData ||
-                pharmacySnapshot.data?.data() == null) {
-              AuthService.signOut();
-              return const LoginScreen();
-            }
-
-            return _PharmacyMainScaffold(isAr: isAr);
-          },
-        );
+        return _PharmacyMainScaffold(isAr: isAr);
       },
     );
   }

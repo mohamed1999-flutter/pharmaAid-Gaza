@@ -30,20 +30,38 @@ class ChatRoomModel {
   });
 
   factory ChatRoomModel.fromMap(String id, Map<String, dynamic> map) {
-    return ChatRoomModel(
-      id: id,
-      userId: map['userId'] ?? '',
-      userName: map['userName'] ?? '',
-      userImageUrl: map['userImageUrl'],
-      pharmacyId: map['pharmacyId'] ?? '',
-      pharmacyName: map['pharmacyName'] ?? '',
-      pharmacyImageUrl: map['pharmacyImageUrl'],
-      lastMessage: map['lastMessage'] ?? '',
-      lastMessageTime: (map['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      userUnreadCount: map['userUnreadCount'] ?? 0,
-      pharmacyUnreadCount: map['pharmacyUnreadCount'] ?? 0,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-    );
+    try {
+      return ChatRoomModel(
+        id: id,
+        userId: map['userId'] ?? '',
+        userName: map['userName'] ?? '',
+        userImageUrl: map['userImageUrl'],
+        pharmacyId: map['pharmacyId'] ?? '',
+        pharmacyName: map['pharmacyName'] ?? '',
+        pharmacyImageUrl: map['pharmacyImageUrl'],
+        lastMessage: map['lastMessage'] ?? '',
+        lastMessageTime:
+            (map['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        userUnreadCount: (map['userUnreadCount'] ?? 0) as int,
+        pharmacyUnreadCount: (map['pharmacyUnreadCount'] ?? 0) as int,
+        createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing ChatRoomModel for doc $id: $e');
+      // Return a minimal model to avoid crashing the whole list
+      return ChatRoomModel(
+        id: id,
+        userId: '',
+        userName: 'Error loading chat',
+        pharmacyId: '',
+        pharmacyName: 'Error loading chat',
+        lastMessage: '',
+        lastMessageTime: DateTime.now(),
+        userUnreadCount: 0,
+        pharmacyUnreadCount: 0,
+        createdAt: DateTime.now(),
+      );
+    }
   }
 
   Map<String, dynamic> toMap() {

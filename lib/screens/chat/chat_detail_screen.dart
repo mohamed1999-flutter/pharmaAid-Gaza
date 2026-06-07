@@ -5,6 +5,7 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/models/chat_models.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
+import '../../core/service/pharmacy_auth_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String chatId;
@@ -32,6 +33,10 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  String get _uid => widget.isPharmacy
+      ? (PharmacyAuthService.currentUser?.user.uid ?? '')
+      : (AuthService.currentUser?.uid ?? '');
+
   @override
   void initState() {
     super.initState();
@@ -42,20 +47,21 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   }
 
   void _markAsRead() {
+    if (_uid.isEmpty) return;
     FirestoreService.markChatAsRead(
       chatId: widget.chatId,
       isPharmacy: widget.isPharmacy,
+      uid: _uid,
     );
   }
 
   void _sendMessage() {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _uid.isEmpty) return;
 
-    final uid = AuthService.currentUser?.uid ?? '';
     FirestoreService.sendMessage(
       chatId: widget.chatId,
-      senderId: uid,
+      senderId: _uid,
       receiverId: widget.otherId,
       text: text,
       isPharmacySender: widget.isPharmacy,
@@ -73,7 +79,6 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   Widget build(BuildContext context) {
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final theme = Theme.of(context);
-    final uid = AuthService.currentUser?.uid ?? '';
 
     return Directionality(
       textDirection: isAr ? TextDirection.rtl : TextDirection.ltr,
@@ -120,6 +125,18 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
               child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                 stream: FirestoreService.chatMessagesStream(widget.chatId),
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    debugPrint('--- CHAT DETAIL ERROR ---');
+                    debugPrint('Error: ${snapshot.error}');
+                    debugPrint('Stacktrace: ${snapshot.stackTrace}');
+                    return Center(
+                      child: Text(
+                        isAr
+                            ? 'حدث خطأ ما فى الرسائل'
+                            : 'Error loading messages',
+                      ),
+                    );
+                  }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
@@ -143,7 +160,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
                     itemCount: messages.length,
                     itemBuilder: (context, index) {
                       final message = messages[index];
-                      final isMe = message.senderId == uid;
+                      final isMe = message.senderId == _uid;
 
                       bool showDateHeader = false;
                       if (index == messages.length - 1) {

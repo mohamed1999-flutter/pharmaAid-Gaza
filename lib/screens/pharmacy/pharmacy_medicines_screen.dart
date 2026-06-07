@@ -1197,7 +1197,7 @@ class _MedicineCard extends StatelessWidget {
                   Expanded(
                     child: _InfoPill(
                       title: isAr ? 'السعر' : 'Price',
-                      value: medicine.price.toString(),
+                      value: '${medicine.price} ₪',
                     ),
                   ),
                   const SizedBox(width: 10),

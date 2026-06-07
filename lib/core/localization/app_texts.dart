@@ -80,7 +80,7 @@ class AppTexts {
 
       AppKeys.banner1Title: 'عرض خاص\nلمدينة عادل',
       AppKeys.banner1Subtitle:
-          'اشتري بقيمة 50 شيكل واحصل\nخصم 50% على باقي الفاتورة',
+          'اشتري بقيمة 50 ₪ واحصل\nخصم 50% على باقي الفاتورة',
       AppKeys.banner2Title: 'خصومات قوية',
       AppKeys.banner2Subtitle: 'عروض يومية على منتجات العناية',
       AppKeys.banner3Title: 'تسوق الآن',
@@ -198,7 +198,7 @@ class AppTexts {
 
       AppKeys.banner1Title: 'Special offer\nFor Adel',
       AppKeys.banner1Subtitle:
-          'Buy for 50 ILS and get\n50% off the rest of the bill',
+          'Buy for 50 ₪ and get\n50% off the rest of the bill',
       AppKeys.banner2Title: 'Big discounts',
       AppKeys.banner2Subtitle: 'Daily deals on care products',
       AppKeys.banner3Title: 'Shop now',

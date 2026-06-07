@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum AppMode { customer, pharmacy }
+
 /// Stores app-level settings like language, theme, and system mode.
 class AppController extends ChangeNotifier {
   static const _localeKey = 'locale_key';
@@ -9,18 +11,19 @@ class AppController extends ChangeNotifier {
 
   Locale _locale = const Locale('ar');
   ThemeMode _themeMode = ThemeMode.light;
-  bool _isPharmacyMode = false;
+  AppMode _appMode = AppMode.customer;
 
   Locale get locale => _locale;
   ThemeMode get themeMode => _themeMode;
-  bool get isPharmacyMode => _isPharmacyMode;
+  AppMode get appMode => _appMode;
+  bool get isPharmacyMode => _appMode == AppMode.pharmacy;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
 
     final savedLocale = prefs.getString(_localeKey);
     final savedTheme = prefs.getString(_themeKey);
-    final savedSystemMode = prefs.getBool(_systemModeKey);
+    final savedSystemMode = prefs.getString(_systemModeKey);
 
     if (savedLocale != null) {
       _locale = Locale(savedLocale);
@@ -34,7 +37,10 @@ class AppController extends ChangeNotifier {
     }
 
     if (savedSystemMode != null) {
-      _isPharmacyMode = savedSystemMode;
+      _appMode = AppMode.values.firstWhere(
+        (mode) => mode.name == savedSystemMode,
+        orElse: () => AppMode.customer,
+      );
     }
 
     notifyListeners();
@@ -68,11 +74,16 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  Future<void> toggleSystemMode() async {
-    _isPharmacyMode = !_isPharmacyMode;
+  Future<void> setAppMode(AppMode mode) async {
+    _appMode = mode;
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_systemModeKey, _isPharmacyMode);
+    await prefs.setString(_systemModeKey, mode.name);
+  }
+
+  Future<void> toggleSystemMode() async {
+    final newMode = isPharmacyMode ? AppMode.customer : AppMode.pharmacy;
+    await setAppMode(newMode);
   }
 }

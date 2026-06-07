@@ -264,7 +264,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ),
                                       ),
                                       Text(
-                                        '${item.total.toStringAsFixed(1)} ${_t('شيكل', 'AED')}',
+                                        '${item.total.toStringAsFixed(1)} ₪',
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey.shade700,
@@ -279,26 +279,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                               _SummaryRow(
                                 label: _t('اجمالي الطلب', 'Subtotal'),
-                                value:
-                                    '${subtotal.toStringAsFixed(1)} ${_t('شيكل', 'AED')}',
+                                value: '${subtotal.toStringAsFixed(1)} ₪',
                               ),
                               const SizedBox(height: 8),
                               _SummaryRow(
                                 label: _t('خدمة التوصيل', 'Delivery fee'),
-                                value:
-                                    '${deliveryFee.toStringAsFixed(1)} ${_t('شيكل', 'AED')}',
+                                value: '${deliveryFee.toStringAsFixed(1)} ₪',
                               ),
                               const SizedBox(height: 8),
                               _SummaryRow(
                                 label: _t('كود خصم', 'Discount code'),
-                                value:
-                                    '${discount.toStringAsFixed(1)} ${_t('شيكل', 'AED')}',
+                                value: '${discount.toStringAsFixed(1)} ₪',
                               ),
                               const SizedBox(height: 8),
                               _SummaryRow(
                                 label: _t('الإجمالي', 'Total'),
-                                value:
-                                    '${total.toStringAsFixed(1)} ${_t('شيكل', 'AED')}',
+                                value: '${total.toStringAsFixed(1)} ₪',
                                 isTotal: true,
                               ),
                             ],

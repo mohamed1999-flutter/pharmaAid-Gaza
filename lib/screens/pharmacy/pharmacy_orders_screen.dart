@@ -59,7 +59,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen>
                       ? allDocs
                       : allDocs
                             .where(
-                              (e) => (e.data()['status'] ?? 'pending') == _filter,
+                              (e) =>
+                                  (e.data()['status'] ?? 'pending') == _filter,
                             )
                             .toList();
 
@@ -108,12 +109,14 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen>
                               _FilterChipItem(
                                 label: isAr ? 'معلقة' : 'Pending',
                                 selected: _filter == 'pending',
-                                onTap: () => setState(() => _filter = 'pending'),
+                                onTap: () =>
+                                    setState(() => _filter = 'pending'),
                               ),
                               _FilterChipItem(
                                 label: isAr ? 'مقبولة' : 'Accepted',
                                 selected: _filter == 'accepted',
-                                onTap: () => setState(() => _filter = 'accepted'),
+                                onTap: () =>
+                                    setState(() => _filter = 'accepted'),
                               ),
                               _FilterChipItem(
                                 label: isAr ? 'تجهيز' : 'Preparing',
@@ -400,7 +403,7 @@ class _OrderCard extends StatelessWidget {
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              isAr ? 'الإجمالي: ${order.total}' : 'Total: ${order.total}',
+              isAr ? 'الإجمالي: ${order.total} ₪' : 'Total: ${order.total} ₪',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
@@ -420,10 +423,7 @@ class _OrderCard extends StatelessWidget {
             ),
             if (order.note != null && order.note!.isNotEmpty) ...[
               const SizedBox(height: 8),
-              _DetailRow(
-                label: isAr ? 'ملاحظات' : 'Note',
-                value: order.note!,
-              ),
+              _DetailRow(label: isAr ? 'ملاحظات' : 'Note', value: order.note!),
             ],
             const SizedBox(height: 14),
             ..._buildItems(theme),
@@ -502,7 +502,7 @@ class _OrderCard extends StatelessWidget {
               children: [
                 Expanded(child: Text(item.name)),
                 Text(
-                  '${item.quantity} × ${item.unitPrice}',
+                  '${item.quantity} × ${item.unitPrice} ₪',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),

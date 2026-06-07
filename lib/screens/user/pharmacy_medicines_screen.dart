@@ -451,7 +451,7 @@ class _PharmacyMedicinesScreenState extends State<PharmacyMedicinesScreen> {
                     Row(
                       children: [
                         Text(
-                          '\$${medicine.price.toStringAsFixed(2)}',
+                          '${medicine.price.toStringAsFixed(2)} ₪',
                           style: TextStyle(
                             color: colorScheme.primary,
                             fontSize: 24,
@@ -864,7 +864,7 @@ class _MedicineCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '\$${medicine.price.toStringAsFixed(2)}',
+                            '${medicine.price.toStringAsFixed(2)} ₪',
                             style: TextStyle(
                               color: colorScheme.primary,
                               fontSize: 16,

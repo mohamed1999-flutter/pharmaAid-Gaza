@@ -1,8 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../core/service/auth_service.dart';
+import '../../core/app/app_controller.dart';
 import '../../core/service/firestore_service.dart';
+import '../../core/service/pharmacy_auth_service.dart';
+import '../auth/auth_gate.dart';
 
 class PharmacyProfileScreen extends StatefulWidget {
   const PharmacyProfileScreen({super.key});
@@ -13,7 +16,7 @@ class PharmacyProfileScreen extends StatefulWidget {
 
 class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
     with AutomaticKeepAliveClientMixin {
-  late final String _uid = AuthService.currentUser?.uid ?? '';
+  late final String _uid = PharmacyAuthService.currentUser?.uid ?? '';
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _stream =
       _uid.isEmpty
       ? const Stream.empty()
@@ -98,8 +101,9 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
                       child: FilledButton.icon(
                         icon: const Icon(Icons.save_rounded),
                         onPressed: () async {
-                          if (!(formKey.currentState?.validate() ?? false))
+                          if (!(formKey.currentState?.validate() ?? false)) {
                             return;
+                          }
 
                           await FirestoreService.updatePharmacyInfo(
                             uid: _uid,
@@ -137,7 +141,6 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
 
     final isAr = Localizations.localeOf(context).languageCode == 'ar';
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -311,7 +314,21 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
                               style: OutlinedButton.styleFrom(
                                 minimumSize: Size.zero,
                               ),
-                              onPressed: () => AuthService.signOut(),
+                              onPressed: () async {
+                                await PharmacyAuthService.signOut();
+                                if (!mounted) return;
+                                // After pharmacy sign out, return to customer mode.
+                                await context.read<AppController>().setAppMode(
+                                  AppMode.customer,
+                                );
+                                if (!mounted) return;
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(
+                                    builder: (_) => const AuthGate(),
+                                  ),
+                                  (route) => false,
+                                );
+                              },
                               icon: const Icon(Icons.logout_rounded),
                               label: Text(isAr ? 'خروج' : 'Logout'),
                             ),

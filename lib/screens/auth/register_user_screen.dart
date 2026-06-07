@@ -1,32 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
 import '../../core/service/app_exception.dart';
 import '../../core/service/auth_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
-import '../shared/map_picker_screen.dart';
 import 'auth_gate.dart';
 
-class RegisterPharmacyScreen extends StatefulWidget {
-  const RegisterPharmacyScreen({super.key});
+class RegisterUserScreen extends StatefulWidget {
+  const RegisterUserScreen({super.key});
 
   @override
-  State<RegisterPharmacyScreen> createState() => _RegisterPharmacyScreenState();
+  State<RegisterUserScreen> createState() => _RegisterUserScreenState();
 }
 
-class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
+class _RegisterUserScreenState extends State<RegisterUserScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
-  final _pharmacyName = TextEditingController();
-  final _pharmacyAddress = TextEditingController();
-  final _pharmacyLocation = TextEditingController();
-  final _pharmacyImageUrl = TextEditingController();
 
   bool _loading = false;
   bool _obscure1 = true;
@@ -38,10 +31,6 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
     _email.dispose();
     _password.dispose();
     _confirmPassword.dispose();
-    _pharmacyName.dispose();
-    _pharmacyAddress.dispose();
-    _pharmacyLocation.dispose();
-    _pharmacyImageUrl.dispose();
     super.dispose();
   }
 
@@ -82,43 +71,22 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
 
     try {
       final isAr = Localizations.localeOf(context).languageCode == 'ar';
-      await AuthService.signUpPharmacy(
+      await AuthService.signUpCustomer(
         name: _name.text,
         email: _email.text,
         password: _password.text,
         confirmPassword: _confirmPassword.text,
-        pharmacyName: _pharmacyName.text,
-        pharmacyAddress: _pharmacyAddress.text,
-        pharmacyLocation: _pharmacyLocation.text,
-        pharmacyImageUrl: _pharmacyImageUrl.text.trim().isEmpty
-            ? null
-            : _pharmacyImageUrl.text.trim(),
         isAr: isAr,
       );
 
       if (!mounted) return;
 
-      // Automatically sign in to the Pharmacy service after registration
-      await PharmacyAuthService.signInPharmacy(
-        email: _email.text,
-        password: _password.text,
-        isAr: isAr,
-      );
-
-      if (!mounted) return;
-
-      // Set app mode to pharmacy
-      await context.read<AppController>().setAppMode(AppMode.pharmacy);
-
-      if (!mounted) return;
+      // Set app mode to customer after successful registration
+      await context.read<AppController>().setAppMode(AppMode.customer);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isAr
-                ? 'تم إنشاء حساب الصيدلية بنجاح'
-                : 'Pharmacy account created successfully.',
-          ),
+        const SnackBar(
+          content: Text('Account created successfully.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -152,7 +120,7 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
       child: Scaffold(
         appBar: AppBar(
           centerTitle: true,
-          title: Text(isAr ? 'إنشاء حساب صيدلي' : 'Create Pharmacist Account'),
+          title: Text(isAr ? 'إنشاء حساب مستخدم' : 'Create Customer Account'),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -174,7 +142,7 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
                           radius: 26,
                           backgroundColor: cs.primary,
                           child: Icon(
-                            Icons.local_pharmacy_rounded,
+                            Icons.person_rounded,
                             color: cs.onPrimary,
                           ),
                         ),
@@ -182,8 +150,8 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
                         Expanded(
                           child: Text(
                             isAr
-                                ? 'املأ البيانات التالية لإنشاء حساب الصيدلية وربطه بفايرستور'
-                                : 'Fill in the form below to create and save the pharmacy profile in Firestore',
+                                ? 'املأ البيانات التالية لإنشاء حساب المستخدم'
+                                : 'Fill in the form below to create a customer account',
                             style: theme.textTheme.bodyMedium?.copyWith(
                               height: 1.5,
                               color: cs.onSurfaceVariant,
@@ -242,66 +210,6 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
                                 setState(() => _obscure2 = !_obscure2),
                             validator: _validateConfirmPassword,
                           ),
-                          const SizedBox(height: 14),
-                          _field(
-                            controller: _pharmacyName,
-                            label: isAr ? 'اسم الصيدلية' : 'Pharmacy name',
-                            icon: Icons.storefront_outlined,
-                            validator: _required,
-                          ),
-                          const SizedBox(height: 14),
-                          _field(
-                            controller: _pharmacyAddress,
-                            label: isAr ? 'عنوان الصيدلية' : 'Pharmacy address',
-                            icon: Icons.location_on_outlined,
-                            validator: _required,
-                          ),
-                          const SizedBox(height: 14),
-                          InkWell(
-                            onTap: () async {
-                              debugPrint(
-                                '[RegisterPharmacy] Opening MapPickerScreen...',
-                              );
-                              final LatLng? result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const MapPickerScreen(),
-                                ),
-                              );
-                              if (result != null) {
-                                debugPrint(
-                                  '[RegisterPharmacy] Location selected: ${result.latitude}, ${result.longitude}',
-                                );
-                                setState(() {
-                                  _pharmacyLocation.text =
-                                      '${result.latitude},${result.longitude}';
-                                });
-                              } else {
-                                debugPrint(
-                                  '[RegisterPharmacy] No location was selected.',
-                                );
-                              }
-                            },
-                            child: AbsorbPointer(
-                              child: _field(
-                                controller: _pharmacyLocation,
-                                label: isAr
-                                    ? 'اختر موقع الصيدلية من الخريطة'
-                                    : 'Pick pharmacy location from map',
-                                icon: Icons.map_outlined,
-                                validator: _required,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _field(
-                            controller: _pharmacyImageUrl,
-                            label: isAr
-                                ? 'رابط صورة الصيدلية (اختياري)'
-                                : 'Pharmacy image URL (optional)',
-                            icon: Icons.image_outlined,
-                            validator: null,
-                          ),
                           const SizedBox(height: 20),
                           SizedBox(
                             height: 54,
@@ -324,15 +232,6 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
                                   : Text(
                                       isAr ? 'إنشاء الحساب' : 'Create account',
                                     ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            isAr
-                                ? 'الصورة لازم تكون رابط مباشر من الإنترنت'
-                                : 'The image must be a direct public URL',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant,
                             ),
                           ),
                         ],

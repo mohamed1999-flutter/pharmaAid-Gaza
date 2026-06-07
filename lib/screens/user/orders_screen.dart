@@ -9,6 +9,8 @@ import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
 import 'pharmacy_details_screen.dart';
 
+enum _AccessState { loading, customer, pharmacy, signedOut, error }
+
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -18,8 +20,82 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   String _selectedFilter = 'all';
+  late Future<_AccessState> _accessFuture;
 
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  @override
+  void initState() {
+    super.initState();
+    _accessFuture = _resolveAccess();
+  }
+
+  Future<void> _refreshAccess() async {
+    setState(() {
+      _accessFuture = _resolveAccess();
+    });
+  }
+
+  Future<_AccessState> _resolveAccess() async {
+    final user = AuthService.currentUser;
+    if (user == null) return _AccessState.signedOut;
+
+    try {
+      final snapshot = await FirestoreService.getUserProfile(user.uid);
+
+      if (!snapshot.exists) {
+        return _AccessState.signedOut;
+      }
+
+      final data = snapshot.data() ?? {};
+      final role = (data['role'] ?? 'user').toString().trim().toLowerCase();
+
+      if (role == 'pharmacy') {
+        return _AccessState.pharmacy;
+      }
+
+      return _AccessState.customer;
+    } catch (_) {
+      return _AccessState.error;
+    }
+  }
+
+  Future<bool> _ensureCustomerAccess(BuildContext context) async {
+    final result = await _resolveAccess();
+
+    if (!mounted) return false;
+
+    if (result == _AccessState.customer) {
+      return true;
+    }
+
+    final cs = Theme.of(context).colorScheme;
+
+    String message;
+    if (result == _AccessState.pharmacy) {
+      message = _isArabic
+          ? 'هذا الحساب حساب صيدلية، ولا يمكن إضافة منتجات إلى السلة.'
+          : 'This is a pharmacy account. Cart actions are not allowed.';
+    } else if (result == _AccessState.signedOut) {
+      message = _isArabic
+          ? 'يجب تسجيل الدخول كـ مستخدم أولًا.'
+          : 'Please sign in as a customer first.';
+    } else {
+      message = _isArabic
+          ? 'تعذر التحقق من نوع الحساب.'
+          : 'Could not verify account type.';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: cs.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,128 +121,181 @@ class _OrdersScreenState extends State<OrdersScreen> {
           child: SafeArea(
             child: user == null
                 ? _buildSignedOutState(theme, cs)
-                : StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirestoreService.userOrdersStream(
-                      user.uid,
-                      status: _selectedFilter == 'all' ? null : _selectedFilter,
-                    ),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                : FutureBuilder<_AccessState>(
+                    future: _accessFuture,
+                    builder: (context, accessSnapshot) {
+                      if (accessSnapshot.connectionState ==
+                          ConnectionState.waiting) {
                         return _buildLoadingState(cs);
                       }
 
-                      if (snapshot.hasError) {
+                      if (accessSnapshot.hasError) {
                         return _buildErrorState(
                           theme,
                           cs,
                           message: _isArabic
-                              ? 'تعذر تحميل الطلبات'
-                              : 'Failed to load orders',
+                              ? 'تعذر التحقق من نوع الحساب'
+                              : 'Failed to verify account type',
                         );
                       }
 
-                      final docs = snapshot.data?.docs ?? [];
-                      final orders = docs
-                          .map((doc) => UserOrder.fromMap(doc.data(), doc.id))
-                          .toList();
+                      final access = accessSnapshot.data ?? _AccessState.error;
 
-                      if (orders.isEmpty) {
-                        return _buildEmptyState(theme, cs);
+                      if (access == _AccessState.signedOut) {
+                        return _buildSignedOutState(theme, cs);
                       }
 
-                      final pendingCount = orders
-                          .where((o) => o.status == 'pending')
-                          .length;
-                      final preparingCount = orders
-                          .where((o) => o.status == 'preparing')
-                          .length;
-                      final readyCount = orders
-                          .where((o) => o.status == 'ready')
-                          .length;
-                      final completedCount = orders
-                          .where((o) => o.status == 'completed')
-                          .length;
+                      if (access == _AccessState.pharmacy) {
+                        return _buildUnauthorizedState(theme, cs);
+                      }
 
-                      return ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                        children: [
-                          _HeaderCard(
-                            isArabic: _isArabic,
-                            totalOrders: orders.length,
-                            pendingCount: pendingCount,
-                            preparingCount: preparingCount,
-                            readyCount: readyCount,
-                            completedCount: completedCount,
-                            colorScheme: cs,
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 54,
-                            child: ListView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.only(bottom: 4),
-                              children: [
-                                _FilterChip(
-                                  label: _isArabic ? 'الكل' : 'All',
-                                  isSelected: _selectedFilter == 'all',
+                      if (access == _AccessState.error) {
+                        return _buildErrorState(
+                          theme,
+                          cs,
+                          message: _isArabic
+                              ? 'حدث خطأ أثناء التحقق من الحساب'
+                              : 'An error occurred while checking the account',
+                        );
+                      }
+
+                      return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: FirestoreService.userOrdersStream(
+                          user.uid,
+                          status: _selectedFilter == 'all'
+                              ? null
+                              : _selectedFilter,
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return _buildLoadingState(cs);
+                          }
+
+                          if (snapshot.hasError) {
+                            return _buildErrorState(
+                              theme,
+                              cs,
+                              message: _isArabic
+                                  ? 'تعذر تحميل الطلبات'
+                                  : 'Failed to load orders',
+                            );
+                          }
+
+                          final docs = snapshot.data?.docs ?? [];
+                          final orders = docs
+                              .map(
+                                (doc) => UserOrder.fromMap(doc.data(), doc.id),
+                              )
+                              .toList();
+
+                          if (orders.isEmpty) {
+                            return _buildEmptyState(theme, cs);
+                          }
+
+                          final pendingCount = orders
+                              .where((o) => o.status == 'pending')
+                              .length;
+                          final preparingCount = orders
+                              .where((o) => o.status == 'preparing')
+                              .length;
+                          final readyCount = orders
+                              .where((o) => o.status == 'ready')
+                              .length;
+                          final completedCount = orders
+                              .where((o) => o.status == 'completed')
+                              .length;
+
+                          return ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                            children: [
+                              _HeaderCard(
+                                isArabic: _isArabic,
+                                totalOrders: orders.length,
+                                pendingCount: pendingCount,
+                                preparingCount: preparingCount,
+                                readyCount: readyCount,
+                                completedCount: completedCount,
+                                colorScheme: cs,
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                height: 54,
+                                child: ListView(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.only(bottom: 4),
+                                  children: [
+                                    _FilterChip(
+                                      label: _isArabic ? 'الكل' : 'All',
+                                      isSelected: _selectedFilter == 'all',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'all',
+                                      ),
+                                    ),
+                                    _FilterChip(
+                                      label: _isArabic
+                                          ? 'قيد الانتظار'
+                                          : 'Pending',
+                                      isSelected: _selectedFilter == 'pending',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'pending',
+                                      ),
+                                    ),
+                                    _FilterChip(
+                                      label: _isArabic
+                                          ? 'قيد التحضير'
+                                          : 'Preparing',
+                                      isSelected:
+                                          _selectedFilter == 'preparing',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'preparing',
+                                      ),
+                                    ),
+                                    _FilterChip(
+                                      label: _isArabic ? 'جاهز' : 'Ready',
+                                      isSelected: _selectedFilter == 'ready',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'ready',
+                                      ),
+                                    ),
+                                    _FilterChip(
+                                      label: _isArabic ? 'مكتمل' : 'Completed',
+                                      isSelected:
+                                          _selectedFilter == 'completed',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'completed',
+                                      ),
+                                    ),
+                                    _FilterChip(
+                                      label: _isArabic ? 'ملغي' : 'Cancelled',
+                                      isSelected:
+                                          _selectedFilter == 'cancelled',
+                                      colorScheme: cs,
+                                      onTap: () => setState(
+                                        () => _selectedFilter = 'cancelled',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ...orders.map(
+                                (order) => _OrderCard(
+                                  order: order,
                                   colorScheme: cs,
+                                  isArabic: _isArabic,
                                   onTap: () =>
-                                      setState(() => _selectedFilter = 'all'),
+                                      _showOrderDetails(context, order),
                                 ),
-                                _FilterChip(
-                                  label: _isArabic ? 'قيد الانتظار' : 'Pending',
-                                  isSelected: _selectedFilter == 'pending',
-                                  colorScheme: cs,
-                                  onTap: () => setState(
-                                    () => _selectedFilter = 'pending',
-                                  ),
-                                ),
-                                _FilterChip(
-                                  label: _isArabic
-                                      ? 'قيد التحضير'
-                                      : 'Preparing',
-                                  isSelected: _selectedFilter == 'preparing',
-                                  colorScheme: cs,
-                                  onTap: () => setState(
-                                    () => _selectedFilter = 'preparing',
-                                  ),
-                                ),
-                                _FilterChip(
-                                  label: _isArabic ? 'جاهز' : 'Ready',
-                                  isSelected: _selectedFilter == 'ready',
-                                  colorScheme: cs,
-                                  onTap: () =>
-                                      setState(() => _selectedFilter = 'ready'),
-                                ),
-                                _FilterChip(
-                                  label: _isArabic ? 'مكتمل' : 'Completed',
-                                  isSelected: _selectedFilter == 'completed',
-                                  colorScheme: cs,
-                                  onTap: () => setState(
-                                    () => _selectedFilter = 'completed',
-                                  ),
-                                ),
-                                _FilterChip(
-                                  label: _isArabic ? 'ملغي' : 'Cancelled',
-                                  isSelected: _selectedFilter == 'cancelled',
-                                  colorScheme: cs,
-                                  onTap: () => setState(
-                                    () => _selectedFilter = 'cancelled',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ...orders.map(
-                            (order) => _OrderCard(
-                              order: order,
-                              colorScheme: cs,
-                              isArabic: _isArabic,
-                              onTap: () => _showOrderDetails(context, order),
-                            ),
-                          ),
-                        ],
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
                   ),
@@ -203,13 +332,68 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _isArabic
-                      ? 'لا يمكن عرض الطلبات بدون حساب صيدلي مسجل.'
-                      : 'Orders cannot be shown without a signed-in pharmacist account.',
+                      ? 'لا يمكن عرض الطلبات بدون حساب مستخدم مسجل.'
+                      : 'Orders cannot be shown without a signed-in customer account.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.5,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnauthorizedState(ThemeData theme, ColorScheme cs) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          elevation: 0,
+          color: cs.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.do_not_disturb_alt_rounded,
+                  size: 56,
+                  color: cs.error,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  _isArabic
+                      ? 'هذا القسم مخصص للمستخدمين فقط'
+                      : 'This section is for customers only',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _isArabic
+                      ? 'حساب الصيدلية لا يمكنه الوصول إلى السلة أو الطلبات هنا.'
+                      : 'Pharmacy accounts cannot use cart or customer orders here.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: _refreshAccess,
+                  child: Text(_isArabic ? 'إعادة التحقق' : 'Recheck'),
                 ),
               ],
             ),
@@ -263,7 +447,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ),
                 const SizedBox(height: 14),
                 OutlinedButton(
-                  onPressed: () => setState(() {}),
+                  onPressed: _refreshAccess,
                   child: Text(_isArabic ? 'إعادة المحاولة' : 'Retry'),
                 ),
               ],
@@ -491,7 +675,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         ),
                                       ),
                                       Text(
-                                        '\$${item.total.toStringAsFixed(2)}',
+                                        '${item.total.toStringAsFixed(2)} ₪',
                                         style: theme.textTheme.bodyLarge
                                             ?.copyWith(
                                               fontWeight: FontWeight.w800,
@@ -525,7 +709,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                             ),
                             Text(
-                              '\$${order.total.toStringAsFixed(2)}',
+                              '${order.total.toStringAsFixed(2)} ₪',
                               style: theme.textTheme.titleLarge?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 color: cs.primary,
@@ -631,8 +815,8 @@ class _HeaderCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             isArabic
-                ? 'تابع كل طلبات العملاء من مكان واحد'
-                : 'Track all customer orders in one place',
+                ? 'تابع كل طلباتك من مكان واحد'
+                : 'Track all your orders in one place',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colorScheme.onPrimary.withOpacity(0.9),
             ),
@@ -835,7 +1019,7 @@ class _OrderCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '\$${order.total.toStringAsFixed(2)}',
+                      '${order.total.toStringAsFixed(2)} ₪',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,

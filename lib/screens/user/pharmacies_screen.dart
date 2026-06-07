@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/models/user_models.dart';
 import '../../core/service/firestore_service.dart';
+import '../shared/map_picker_screen.dart';
 import 'pharmacy_details_screen.dart';
 
 class PharmaciesScreen extends StatefulWidget {
@@ -275,6 +277,52 @@ class _PharmacyCard extends StatelessWidget {
                   Icons.arrow_forward_ios,
                   size: 16,
                   color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () {
+                    debugPrint(
+                      '[PharmaciesScreen] Opening map for pharmacy: ${pharmacy.name}',
+                    );
+                    try {
+                      final coords = pharmacy.location.split(',');
+                      if (coords.length == 2) {
+                        final lat = double.parse(coords[0].trim());
+                        final lng = double.parse(coords[1].trim());
+                        debugPrint(
+                          '[PharmaciesScreen] Target location: $lat, $lng',
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MapViewScreen(
+                              location: LatLng(lat, lng),
+                              title: pharmacy.name,
+                            ),
+                          ),
+                        );
+                      } else {
+                        debugPrint(
+                          '[PharmaciesScreen] Location format invalid: ${pharmacy.location}',
+                        );
+                      }
+                    } catch (e) {
+                      debugPrint(
+                        '[PharmaciesScreen] Error parsing location: $e',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isArabic
+                                ? 'موقع الصيدلية غير صالح'
+                                : 'Invalid pharmacy location',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  icon: Icon(Icons.map_outlined, color: colorScheme.primary),
+                  tooltip: isArabic ? 'عرض على الخريطة' : 'View on map',
                 ),
               ],
             ),

@@ -14,7 +14,9 @@ class IntorScreen extends StatelessWidget {
 
   void _goHome(BuildContext context) {
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(initialTarget: LoginTarget.customer),
+      ),
       (route) => false,
     );
   }
@@ -58,7 +60,6 @@ class IntorScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     const Spacer(flex: 2),
-
                     Center(
                       child: Column(
                         children: [
@@ -90,9 +91,7 @@ class IntorScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 34),
-
                     Text(
                       AppTexts.tr(context, AppKeys.welcomeToApp),
                       textAlign: TextAlign.center,
@@ -103,9 +102,7 @@ class IntorScreen extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-
                     const SizedBox(height: 26),
-
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -117,9 +114,7 @@ class IntorScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
-                        onPressed: () {
-                          _goHome(context);
-                        },
+                        onPressed: () => _goHome(context),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -152,9 +147,7 @@ class IntorScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 18),
-
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                       child: Text(
@@ -168,7 +161,6 @@ class IntorScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     const Spacer(flex: 3),
                   ],
                 ),

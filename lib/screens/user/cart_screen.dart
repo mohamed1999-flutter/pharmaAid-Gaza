@@ -275,7 +275,7 @@ class _PharmacySectionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${subtotal.toStringAsFixed(1)} شيكل',
+                        '${subtotal.toStringAsFixed(1)} ₪',
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -378,7 +378,7 @@ class _CartItemCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Text(
-                      '${item.price.toStringAsFixed(2)} شيكل',
+                      '${item.price.toStringAsFixed(2)} ₪',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFF4A4A4A),

@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/models/pharmacy_models.dart';
 import '../../core/models/user_models.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
 import '../chat/chat_detail_screen.dart';
+import '../shared/map_picker_screen.dart';
 import 'medicine_details_screen.dart';
 import 'pharmacy_medicines_screen.dart';
 
@@ -296,10 +298,32 @@ class _PharmacyDetailsScreenState extends State<PharmacyDetailsScreen> {
                               label: pharmacy.address,
                               colorScheme: colorScheme,
                             ),
-                            _InfoChip(
-                              icon: Icons.map_outlined,
-                              label: pharmacy.location,
-                              colorScheme: colorScheme,
+                            InkWell(
+                              onTap: () {
+                                try {
+                                  final coords = pharmacy.location.split(',');
+                                  if (coords.length == 2) {
+                                    final lat = double.parse(coords[0].trim());
+                                    final lng = double.parse(coords[1].trim());
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => MapViewScreen(
+                                          location: LatLng(lat, lng),
+                                          title: pharmacy.name,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  // Fail silently
+                                }
+                              },
+                              child: _InfoChip(
+                                icon: Icons.map_outlined,
+                                label: pharmacy.location,
+                                colorScheme: colorScheme,
+                              ),
                             ),
                             _InfoChip(
                               icon: Icons.person_outline_rounded,
@@ -801,9 +825,37 @@ class _PharmacyHeroCard extends StatelessWidget {
                       label: isArabic ? 'الموقع' : 'Location',
                       colorScheme: colorScheme,
                       onTap: () {
-                        debugPrint(
-                          '[PharmacyDetailsScreen] Location quick action tapped',
-                        );
+                        debugPrint('[PharmacyDetails] Location QuickAction tapped for: ${pharmacy.name}');
+                        try {
+                          final coords = pharmacy.location.split(',');
+                          if (coords.length == 2) {
+                            final lat = double.parse(coords[0].trim());
+                            final lng = double.parse(coords[1].trim());
+                            debugPrint('[PharmacyDetails] Navigating to MapViewScreen: $lat, $lng');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MapViewScreen(
+                                  location: LatLng(lat, lng),
+                                  title: pharmacy.name,
+                                ),
+                              ),
+                            );
+                          } else {
+                            debugPrint('[PharmacyDetails] Location format invalid: ${pharmacy.location}');
+                          }
+                        } catch (e) {
+                          debugPrint('[PharmacyDetails] Error parsing location: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isArabic
+                                    ? 'موقع الصيدلية غير صالح'
+                                    : 'Invalid pharmacy location',
+                              ),
+                            ),
+                          );
+                        }
                       },
                     ),
                     const SizedBox(width: 10),
@@ -1325,7 +1377,7 @@ class _MedicinePreviewCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '\$${medicine.price.toStringAsFixed(2)}',
+                              '${medicine.price.toStringAsFixed(2)} ₪',
                               style: TextStyle(
                                 color: colorScheme.primary,
                                 fontSize: 16,

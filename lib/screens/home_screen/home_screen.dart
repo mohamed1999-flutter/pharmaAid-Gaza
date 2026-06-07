@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app/app_controller.dart';
 import '../../core/localization/app_keys.dart';
 import '../../core/localization/app_texts.dart';
+import '../../core/models/user_models.dart';
 import '../../core/providers/cart_provider.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
@@ -104,15 +105,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Close dialog first.
                   Navigator.of(dialogContext).pop();
 
-                  // Switch app mode so the app knows we moved to pharmacy mode.
-                  await context.read<AppController>().toggleSystemMode();
+                  // Switch app mode to pharmacy in the controller.
+                  // Note: We do NOT sign out the customer here.
+                  await context.read<AppController>().setAppMode(
+                    AppMode.pharmacy,
+                  );
 
                   if (!mounted) return;
 
-                  // Navigate to pharmacy login screen.
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                    (route) => false,
+                  // Navigate to pharmacy login screen directly as requested.
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(
+                        initialTarget: LoginTarget.pharmacy,
+                      ),
+                    ),
                   );
                 },
                 child: Text(
@@ -128,6 +135,78 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Future<void> _addToCart(_ProductItem item) async {
+    final cart = context.read<CartProvider>();
+    final isAr = _isArabic;
+
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Get first available pharmacy as a fallback for dummy items
+      final pharmacies = await FirestoreService.pharmaciesStream().first;
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+
+      if (pharmacies.docs.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isAr ? 'لا توجد صيدليات متاحة حالياً' : 'No pharmacies available',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final pharmacyDoc = pharmacies.docs.first;
+      final pharmacyData = pharmacyDoc.data();
+      final pharmacyId = pharmacyDoc.id;
+      final pharmacyName =
+          pharmacyData['pharmacyName'] ?? pharmacyData['name'] ?? 'Pharmacy';
+
+      await cart.addItem(
+        CartItem(
+          medicineId: item.id,
+          name: item.title,
+          price: double.parse(item.price),
+          quantity: 1,
+          pharmacyId: pharmacyId,
+          pharmacyName: pharmacyName,
+        ),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isAr ? 'تم الإضافة إلى السلة' : 'Added to cart successfully',
+          ),
+          action: SnackBarAction(
+            label: isAr ? 'عرض السلة' : 'View Cart',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CartScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        if (Navigator.canPop(context)) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isAr ? 'حدث خطأ ما' : 'Something went wrong')),
+        );
+      }
+    }
   }
 
   @override
@@ -206,14 +285,16 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     ];
 
-    final bestSellers = <_ProductItem>[
+    final bestSellers = [
       _ProductItem(
+        id: 'best_1',
         title: _t(context, AppKeys.bestSeller1Title),
         price: '58.50',
         oldPrice: '64.99',
         discount: '10%',
       ),
       _ProductItem(
+        id: 'best_2',
         title: _t(context, AppKeys.bestSeller2Title),
         price: '39.90',
         oldPrice: '49.90',
@@ -510,6 +591,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       oldPrice: item.oldPrice,
                       discount: item.discount,
                       colorScheme: colorScheme,
+                      onAddToCart: () => _addToCart(item),
                     );
                   },
                 ),
@@ -942,6 +1024,7 @@ class _ProductCard extends StatelessWidget {
     required this.oldPrice,
     required this.discount,
     required this.colorScheme,
+    required this.onAddToCart,
   });
 
   final String title;
@@ -949,6 +1032,7 @@ class _ProductCard extends StatelessWidget {
   final String oldPrice;
   final String discount;
   final ColorScheme colorScheme;
+  final VoidCallback onAddToCart;
 
   @override
   Widget build(BuildContext context) {
@@ -1037,7 +1121,7 @@ class _ProductCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$price ILS',
+            '$price ₪',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colorScheme.onSurface,
@@ -1047,7 +1131,7 @@ class _ProductCard extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '$oldPrice ILS',
+            '$oldPrice ₪',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: colorScheme.onSurfaceVariant,
@@ -1067,7 +1151,7 @@ class _ProductCard extends StatelessWidget {
                 ),
                 elevation: 0,
               ),
-              onPressed: () {},
+              onPressed: onAddToCart,
               child: Text(
                 AppTexts.tr(context, AppKeys.addToCart),
                 style: TextStyle(
@@ -1110,12 +1194,14 @@ class _PharmacyItem {
 }
 
 class _ProductItem {
+  final String id;
   final String title;
   final String price;
   final String oldPrice;
   final String discount;
 
   const _ProductItem({
+    required this.id,
     required this.title,
     required this.price,
     required this.oldPrice,

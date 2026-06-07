@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
-import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
+import '../../core/service/pharmacy_auth_service.dart';
+import '../auth/auth_gate.dart';
 import '../chat/chat_list_screen.dart';
-import '../user/user_shell_screen.dart';
 
 class PharmacyDashboardScreen extends StatefulWidget {
   const PharmacyDashboardScreen({super.key});
@@ -18,7 +18,7 @@ class PharmacyDashboardScreen extends StatefulWidget {
 
 class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen>
     with AutomaticKeepAliveClientMixin {
-  late final String _uid = AuthService.currentUser?.uid ?? '';
+  late final String _uid = PharmacyAuthService.currentUser?.uid ?? '';
   late final Stream<QuerySnapshot<Map<String, dynamic>>> _ordersStream =
       _uid.isEmpty
       ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
@@ -119,13 +119,19 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen>
               },
             ),
             IconButton(
-              tooltip: isAr ? 'الخروج' : 'Exit',
-              icon: const Icon(Icons.logout_rounded),
+              tooltip: isAr ? 'العودة للمستخدم' : 'Back to User',
+              icon: const Icon(Icons.swap_horiz_rounded),
               onPressed: () async {
-                await context.read<AppController>().toggleSystemMode();
+                // Return to customer mode.
+                // We keep the pharmacy session active but change the UI mode.
+                await context.read<AppController>().setAppMode(
+                  AppMode.customer,
+                );
                 if (!context.mounted) return;
+
+                // Reset to AuthGate which will see AppMode.customer and show the UserShellScreen.
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const UserShellScreen()),
+                  MaterialPageRoute(builder: (_) => const AuthGate()),
                   (route) => false,
                 );
               },
@@ -605,8 +611,8 @@ class _OrderCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               isAr
-                                  ? 'الإجمالي: $totalText'
-                                  : 'Total: $totalText',
+                                  ? 'الإجمالي: $totalText ₪'
+                                  : 'Total: $totalText ₪',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: cs.onSurfaceVariant,
                                 fontWeight: FontWeight.w600,
@@ -720,7 +726,7 @@ class _OrderCard extends StatelessWidget {
 
     return [
       Text(
-        'Items',
+        isAr ? 'العناصر' : 'Items',
         style: theme.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w900,
         ),
@@ -749,7 +755,7 @@ class _OrderCard extends StatelessWidget {
               children: [
                 Expanded(child: Text(name)),
                 Text(
-                  '$quantity × $unitPrice',
+                  '$quantity × $unitPrice ₪',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),

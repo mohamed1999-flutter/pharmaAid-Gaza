@@ -101,8 +101,11 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const AuthGate()),
         (route) => false,
       );
-    } catch (e) {
+    } catch (e, st) {
       if (!mounted) return;
+
+      debugPrint("❌ [LoginScreen] Login Error: $e");
+      debugPrint("❌ [LoginScreen] StackTrace: $st");
 
       final message = e is AppException ? e.message : e.toString();
 

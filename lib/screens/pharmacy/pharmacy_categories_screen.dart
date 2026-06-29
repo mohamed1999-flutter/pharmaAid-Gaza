@@ -190,8 +190,9 @@ class _PharmacyCategoriesScreenState extends State<PharmacyCategoriesScreen>
               stream: _stream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
+                  print('🔥 Firestore Stream Error (Categories): ${snapshot.error}');
                   return Center(
-                    child: Text(isAr ? 'حدث خطأ' : 'Something went wrong'),
+                    child: Text(isAr ? 'حدث خطأ: ${snapshot.error}' : 'Something went wrong'),
                   );
                 }
 

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/models/chat_models.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
 import 'chat_detail_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
@@ -26,7 +25,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     // Using the new .uid getter where possible for Pharmacy
     String uid = '';
     if (widget.isPharmacy) {
-      uid = PharmacyAuthService.currentUser?.uid ?? '';
+      uid = AuthService.currentUser?.uid ?? '';
     } else {
       uid = AuthService.currentUser?.uid ?? '';
     }

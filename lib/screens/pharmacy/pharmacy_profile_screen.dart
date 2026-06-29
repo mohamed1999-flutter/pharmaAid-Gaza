@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
 import '../../core/service/firestore_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
+import '../../core/service/auth_service.dart';
 import '../auth/auth_gate.dart';
 
 class PharmacyProfileScreen extends StatefulWidget {
@@ -16,7 +16,7 @@ class PharmacyProfileScreen extends StatefulWidget {
 
 class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
     with AutomaticKeepAliveClientMixin {
-  late final String _uid = PharmacyAuthService.currentUser?.uid ?? '';
+  late final String _uid = AuthService.currentUser?.uid ?? '';
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _stream =
       _uid.isEmpty
       ? const Stream.empty()
@@ -315,7 +315,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen>
                                 minimumSize: Size.zero,
                               ),
                               onPressed: () async {
-                                await PharmacyAuthService.signOut();
+                                await AuthService.signOut();
                                 if (!mounted) return;
                                 // After pharmacy sign out, return to customer mode.
                                 await context.read<AppController>().setAppMode(

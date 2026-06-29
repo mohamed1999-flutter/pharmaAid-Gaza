@@ -8,7 +8,6 @@ import 'core/app/app_controller.dart';
 import 'core/localization/app_texts.dart';
 import 'core/providers/cart_provider.dart';
 import 'core/service/auth_service.dart';
-import 'core/service/pharmacy_auth_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'screens/splash/splash.dart';
@@ -16,19 +15,8 @@ import 'screens/splash/splash.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Default App (for Customers)
+  // Initialize Default App
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Initialize Secondary App (for Pharmacies)
-  // This allows having two separate authentication sessions simultaneously.
-  try {
-    await Firebase.initializeApp(
-      name: 'PharmacyApp',
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('PharmacyApp already initialized or failed: $e');
-  }
 
   final appController = AppController();
   await appController.load();
@@ -37,15 +25,10 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: appController),
-        // Stream for Customer Auth
+        // Unified Auth Stream
         StreamProvider<User?>(
           create: (_) => AuthService.authStateChanges(),
           initialData: AuthService.currentUser,
-        ),
-        // Stream for Pharmacy Auth
-        StreamProvider<PharmacyUserAuth?>(
-          create: (_) => PharmacyAuthService.authStateChanges(),
-          initialData: PharmacyAuthService.currentUser,
         ),
         ChangeNotifierProxyProvider<User?, CartProvider>(
           create: (_) => CartProvider(userId: ''),
@@ -85,11 +68,4 @@ class MyApp extends StatelessWidget {
       home: const SplashScreen(),
     );
   }
-}
-
-// Simple wrapper to distinguish between User types in Provider
-class PharmacyUserAuth {
-  final User user;
-  PharmacyUserAuth(this.user);
-  String get uid => user.uid;
 }

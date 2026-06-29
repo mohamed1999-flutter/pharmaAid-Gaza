@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../core/app/app_controller.dart';
 import '../../core/service/app_exception.dart';
 import '../../core/service/auth_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
 import '../shared/map_picker_screen.dart';
 import 'auth_gate.dart';
 
@@ -98,14 +97,7 @@ class _RegisterPharmacyScreenState extends State<RegisterPharmacyScreen> {
 
       if (!mounted) return;
 
-      // Automatically sign in to the Pharmacy service after registration
-      await PharmacyAuthService.signInPharmacy(
-        email: _email.text,
-        password: _password.text,
-        isAr: isAr,
-      );
 
-      if (!mounted) return;
 
       // Set app mode to pharmacy
       await context.read<AppController>().setAppMode(AppMode.pharmacy);

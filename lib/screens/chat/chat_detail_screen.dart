@@ -5,7 +5,6 @@ import 'package:intl/intl.dart' hide TextDirection;
 import '../../core/models/chat_models.dart';
 import '../../core/service/auth_service.dart';
 import '../../core/service/firestore_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
 
 class ChatDetailScreen extends StatefulWidget {
   final String chatId;
@@ -33,9 +32,7 @@ class _ChatDetailScreenState extends State<ChatDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  String get _uid => widget.isPharmacy
-      ? (PharmacyAuthService.currentUser?.user.uid ?? '')
-      : (AuthService.currentUser?.uid ?? '');
+  String get _uid => AuthService.currentUser?.uid ?? '';
 
   @override
   void initState() {

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
-import '../../core/service/pharmacy_auth_service.dart';
 import '../../main.dart';
 import '../pharmacy/pharmacy_shell_screen.dart';
 import '../user/user_shell_screen.dart';
@@ -18,18 +17,15 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final appController = context.watch<AppController>();
     final isPharmacyMode = appController.isPharmacyMode;
+    final userAuth = context.watch<User?>();
 
     if (isPharmacyMode) {
-      // Use Pharmacy-specific authentication state
-      final pharmacyAuth = context.watch<PharmacyUserAuth?>();
-      if (pharmacyAuth != null) {
+      if (userAuth != null) {
         return const PharmacyShellScreen();
       }
       return const LoginScreen(initialTarget: LoginTarget.pharmacy);
     } else {
-      // Use Customer-specific authentication state
-      final customerAuth = context.watch<User?>();
-      if (customerAuth != null) {
+      if (userAuth != null) {
         return const UserShellScreen();
       }
       return const LoginScreen(initialTarget: LoginTarget.customer);

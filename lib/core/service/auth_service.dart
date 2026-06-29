@@ -412,9 +412,6 @@ class AuthService {
 
       try {
         await FirestoreService.createPharmacyAccount(user: pharmacyUser);
-        // CRITICAL: Sign out from the default app after registration.
-        // This ensures the pharmacy account doesn't stay as the "currentUser" for customers.
-        await _auth.signOut();
       } catch (e) {
         try {
           await user.delete();

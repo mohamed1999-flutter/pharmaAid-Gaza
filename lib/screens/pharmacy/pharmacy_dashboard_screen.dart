@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app/app_controller.dart';
 import '../../core/service/firestore_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
+import '../../core/service/auth_service.dart';
 import '../auth/auth_gate.dart';
 import '../chat/chat_list_screen.dart';
 
@@ -18,7 +18,7 @@ class PharmacyDashboardScreen extends StatefulWidget {
 
 class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen>
     with AutomaticKeepAliveClientMixin {
-  late final String _uid = PharmacyAuthService.currentUser?.uid ?? '';
+  late final String _uid = AuthService.currentUser?.uid ?? '';
   late final Stream<QuerySnapshot<Map<String, dynamic>>> _ordersStream =
       _uid.isEmpty
       ? const Stream<QuerySnapshot<Map<String, dynamic>>>.empty()
@@ -144,8 +144,9 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen>
                 stream: _ordersStream,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
+                    print('🔥 Firestore Stream Error (Dashboard Orders): ${snapshot.error}');
                     return Center(
-                      child: Text(isAr ? 'حدث خطأ' : 'Something went wrong'),
+                      child: Text(isAr ? 'حدث خطأ: ${snapshot.error}' : 'Something went wrong'),
                     );
                   }
 

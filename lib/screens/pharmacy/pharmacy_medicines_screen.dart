@@ -537,10 +537,11 @@ class _PharmacyMedicinesScreenState extends State<PharmacyMedicinesScreen>
         stream: _categoriesStream,
         builder: (context, categoriesSnapshot) {
           if (categoriesSnapshot.hasError) {
+            print('🔥 Firestore Stream Error (Medicines - Categories): ${categoriesSnapshot.error}');
             return Scaffold(
               appBar: AppBar(title: Text(isAr ? 'الأدوية' : 'Medicines')),
               body: Center(
-                child: Text(isAr ? 'حدث خطأ' : 'Something went wrong'),
+                child: Text(isAr ? 'حدث خطأ: ${categoriesSnapshot.error}' : 'Something went wrong'),
               ),
             );
           }
@@ -567,10 +568,11 @@ class _PharmacyMedicinesScreenState extends State<PharmacyMedicinesScreen>
             stream: _medicinesStream,
             builder: (context, medicinesSnapshot) {
               if (medicinesSnapshot.hasError) {
+                print('🔥 Firestore Stream Error (Medicines): ${medicinesSnapshot.error}');
                 return Scaffold(
                   appBar: AppBar(title: Text(isAr ? 'الأدوية' : 'Medicines')),
                   body: Center(
-                    child: Text(isAr ? 'حدث خطأ' : 'Something went wrong'),
+                    child: Text(isAr ? 'حدث خطأ: ${medicinesSnapshot.error}' : 'Something went wrong'),
                   ),
                 );
               }

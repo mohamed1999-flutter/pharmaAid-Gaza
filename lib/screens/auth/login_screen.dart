@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../core/app/app_controller.dart';
 import '../../core/service/app_exception.dart';
 import '../../core/service/auth_service.dart';
-import '../../core/service/pharmacy_auth_service.dart';
 import 'auth_gate.dart';
 import 'register_pharmacy_screen.dart';
 
@@ -86,9 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
         // Ensure AppMode matches the login type
         await appController.setAppMode(AppMode.customer);
       } else {
-        final isAr = Localizations.localeOf(context).languageCode == 'ar';
-        // Use the NEW PharmacyAuthService which uses a separate Firebase App instance.
-        await PharmacyAuthService.signInPharmacy(
+        await AuthService.signInPharmacy(
           email: _email.text,
           password: _password.text,
           isAr: isAr,

@@ -1,6 +1,7 @@
 <div align="center">
+<img width="327" height="707" alt="image" src="https://github.com/user-attachments/assets/9b8e4b30-6995-4842-af5c-05de4258fa08" />
 
-<img src="assets/readme/banner.png" width="100%" alt="PharmaAid Gaza Banner">
+<!-- <img src="assets/readme/banner.png" width="100%" alt="PharmaAid Gaza Banner"> -->
 
 # 💊 PharmaAid Gaza
 

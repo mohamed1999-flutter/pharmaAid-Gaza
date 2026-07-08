@@ -96,10 +96,11 @@ The project was developed as a Graduation Project using Flutter, Firebase, and G
 
 <table align="center">
 
+
 <tr>
 <td align="center">
 <b>🏠 Home</b><br><br>
-<img src="home.png" width="220">
+<img src="https://github.com/user-attachments/assets/2832afe4-98be-4e1a-bcdb-fbfb8b35699a" width="220">
 </td>
 
 <td align="center">
@@ -107,33 +108,38 @@ The project was developed as a Graduation Project using Flutter, Firebase, and G
 <img src="search.png" width="220">
 </td>
 
+
 <td align="center">
 <b>💬 Pharmacy Chat</b><br><br>
-<img src="chat.png" width="220">
+<img src="https://github.com/user-attachments/assets/c8af2c6c-8616-4a1a-a395-c00aaaf62506" width="220">
 </td>
 </tr>
+
 
 <tr>
 <td align="center">
 <b>🗺 Google Maps</b><br><br>
-<img src="maps.png" width="220">
+<img src="https://github.com/user-attachments/assets/e780fa85-d70d-4760-9ba8-41e198dbfc00" width="220">
 </td>
+
 
 <td align="center">
 <b>🛒 Shopping Cart</b><br><br>
-<img src="cart.png" width="220">
+<img src="https://github.com/user-attachments/assets/d268a77c-4a54-4c66-b3fe-a545808bf584" width="220">
 </td>
+
+
 
 <td align="center">
 <b>📦 Orders</b><br><br>
-<img src="orders.png" width="220">
+<img src="https://github.com/user-attachments/assets/f65b47e7-5538-4d17-96a4-c8508e3eac4d" width="220">
 </td>
 </tr>
 
 <tr>
 <td align="center">
 <b>👤 Profile</b><br><br>
-<img src="profile.png" width="220">
+<img src="https://github.com/user-attachments/assets/99395072-a540-421d-b0fe-09e5c3cf0443" width="220">
 </td>
 
 <td></td>

@@ -79,16 +79,18 @@ The project was developed as a Graduation Project using Flutter, Firebase, and G
 # 🏗 System Architecture
 
 <p align="center">
-<img src="architecture.png" width="90%">
+<img src="https://github.com/user-attachments/assets/64728aed-477b-4a52-8c09-253f93ec114a" width="90%">
 </p>
+
 
 ---
 
 # 🗄 Database Design
 
 <p align="center">
-<img src="erd.png" width="90%">
+<img  src="https://github.com/user-attachments/assets/7c9587db-2f9a-41a0-b006-d52e4810f57e" width="90%">
 </p>
+
 
 ---
 
@@ -103,9 +105,10 @@ The project was developed as a Graduation Project using Flutter, Firebase, and G
 <img src="https://github.com/user-attachments/assets/2832afe4-98be-4e1a-bcdb-fbfb8b35699a" width="220">
 </td>
 
+
 <td align="center">
 <b>🔍 Medicine Search</b><br><br>
-<img src="search.png" width="220">
+<img src="https://github.com/user-attachments/assets/d24edf90-10f0-404d-842c-68e204105e9e" width="220">
 </td>
 
 
@@ -142,8 +145,18 @@ The project was developed as a Graduation Project using Flutter, Firebase, and G
 <img src="https://github.com/user-attachments/assets/99395072-a540-421d-b0fe-09e5c3cf0443" width="220">
 </td>
 
-<td></td>
-<td></td>
+<td align="center">
+<b>Home Interface</b><br><br>
+<img src="https://github.com/user-attachments/assets/4e18a45f-b416-4c38-bca2-6647b7c25c21" width="220">
+
+</td>
+
+
+<td align="center">
+<b>Medicine Ordering</b><br><br>
+<img src="https://github.com/user-attachments/assets/658dce32-07f5-461a-aa59-08e687d7935d" width="220">
+
+</td>
 
 </tr>
 
